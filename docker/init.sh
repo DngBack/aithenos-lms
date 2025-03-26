@@ -34,6 +34,15 @@ bench new-site lms.localhost \
 
 bench --site lms.localhost install-app lms
 bench --site lms.localhost set-config developer_mode 1
+
+# Configure Google OAuth2 if environment variables are set
+if [ ! -z "$GOOGLE_OAUTH2_CLIENT_ID" ] && [ ! -z "$GOOGLE_OAUTH2_CLIENT_SECRET" ]; then
+    echo "Configuring Google OAuth2..."
+    bench --site lms.localhost set-config google_oauth2_client_id "$GOOGLE_OAUTH2_CLIENT_ID"
+    bench --site lms.localhost set-config google_oauth2_client_secret "$GOOGLE_OAUTH2_CLIENT_SECRET"
+    bench --site lms.localhost set-config google_oauth2_redirect_uri "$GOOGLE_OAUTH2_REDIRECT_URI"
+fi
+
 bench --site lms.localhost clear-cache
 bench use lms.localhost
 

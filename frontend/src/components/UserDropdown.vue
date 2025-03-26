@@ -1,64 +1,60 @@
 <template>
-	<Dropdown class="p-2" :options="userDropdownOptions">
-		<template v-slot="{ open }">
-			<button
-				class="flex h-12 py-2 items-center rounded-md duration-300 ease-in-out"
-				:class="
-					isCollapsed
-						? 'px-0 w-auto'
-						: open
-						? 'bg-surface-white shadow-sm px-2 w-52'
-						: 'hover:bg-surface-gray-3 px-2 w-52'
-				"
-			>
-				<img
-					v-if="branding.data?.banner_image"
-					:src="branding.data?.banner_image.file_url"
-					class="w-8 h-8 rounded flex-shrink-0"
-				/>
-				<LMSLogo v-else class="w-8 h-8 rounded flex-shrink-0" />
-				<div
-					class="flex flex-1 flex-col text-left duration-300 ease-in-out"
-					:class="
-						isCollapsed
-							? 'opacity-0 ml-0 w-0 overflow-hidden'
-							: 'opacity-100 ml-2 w-auto'
-					"
-				>
-					<div class="text-base font-medium text-ink-gray-9 leading-none">
-						<span
-							v-if="
-								branding.data?.app_name && branding.data?.app_name != 'Frappe'
-							"
-						>
-							{{ branding.data?.app_name }}
-						</span>
-						<span v-else> Learning </span>
-					</div>
-					<div
-						v-if="userResource"
-						class="mt-1 text-sm text-ink-gray-7 leading-none"
+	<div class="relative">
+		<button
+			@click="toggleDropdown"
+			class="flex items-center space-x-2 focus:outline-none"
+		>
+			<UserAvatar :user="user" />
+			<span class="text-gray-700">{{ user.full_name }}</span>
+			<ChevronDownIcon class="w-4 h-4 text-gray-500" />
+		</button>
+
+		<div
+			v-if="isOpen"
+			class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50"
+		>
+			<!-- Role Switch Section -->
+			<div v-if="hasMultipleRoles" class="px-4 py-2 border-b">
+				<p class="text-sm text-gray-500 mb-2">Switch Role</p>
+				<div class="space-y-2">
+					<button
+						v-for="role in availableRoles"
+						:key="role"
+						@click="switchRole(role)"
+						class="w-full text-left px-2 py-1 text-sm rounded hover:bg-gray-100"
+						:class="{ 'bg-gray-100': currentRole === role }"
 					>
-						{{ convertToTitleCase(userResource.data?.full_name) }}
-					</div>
+						{{ role === 'LMS Student' ? 'Student View' : 'Teacher Studio' }}
+					</button>
 				</div>
-				<div
-					class="duration-300 ease-in-out"
-					:class="
-						isCollapsed
-							? 'opacity-0 ml-0 w-0 overflow-hidden'
-							: 'opacity-100 ml-2 w-auto'
-					"
-				>
-					<ChevronDown class="h-4 w-4 text-ink-gray-7" />
-				</div>
+			</div>
+
+			<!-- Navigation Links -->
+			<router-link
+				to="/profile"
+				class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+				@click="isOpen = false"
+			>
+				Profile
+			</router-link>
+			<router-link
+				to="/settings"
+				class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+				@click="isOpen = false"
+			>
+				Settings
+			</router-link>
+
+			<!-- Logout Button -->
+			<button
+				@click="logout"
+				class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+				@click="isOpen = false"
+			>
+				Logout
 			</button>
-		</template>
-	</Dropdown>
-	<SettingsModal
-		v-if="userResource.data?.is_moderator"
-		v-model="showSettingsModal"
-	/>
+		</div>
+	</div>
 </template>
 
 <script setup>
@@ -84,6 +80,9 @@ import {
 	Sun,
 	Zap,
 } from 'lucide-vue-next'
+import UserAvatar from './UserAvatar.vue'
+import { ChevronDownIcon } from '@heroicons/vue/solid'
+import { useAuthStore } from '../stores/auth'
 
 const router = useRouter()
 const { logout, branding } = sessionStore()
@@ -94,6 +93,9 @@ const showSettingsModal = ref(false)
 const theme = ref('light')
 const frappeCloudBaseEndpoint = 'https://frappecloud.com'
 const $dialog = createDialog
+const authStore = useAuthStore()
+const isOpen = ref(false)
+const user = computed(() => authStore.user)
 
 const props = defineProps({
 	isCollapsed: {
@@ -236,5 +238,44 @@ const userDropdownOptions = computed(() => {
 const loginToFrappeCloud = () => {
 	let redirect_to = '/dashboard/sites/' + userResource.data.sitename
 	window.open(`${frappeCloudBaseEndpoint}${redirect_to}`, '_blank')
+}
+
+const currentRole = computed(() => {
+	const roles = user.value?.roles || []
+	if (roles.includes('LMS Teacher')) return 'LMS Teacher'
+	return 'LMS Student'
+})
+
+const hasMultipleRoles = computed(() => {
+	const roles = user.value?.roles || []
+	return roles.includes('LMS Student') && roles.includes('LMS Teacher')
+})
+
+const availableRoles = computed(() => {
+	const roles = user.value?.roles || []
+	return roles.filter((role) => ['LMS Student', 'LMS Teacher'].includes(role))
+})
+
+const toggleDropdown = () => {
+	isOpen.value = !isOpen.value
+}
+
+const switchRole = async (role) => {
+	try {
+		await authStore.switchRole(role)
+		// Redirect based on role
+		if (role === 'LMS Teacher') {
+			router.push('/studio')
+		} else {
+			router.push('/dashboard')
+		}
+	} catch (error) {
+		console.error('Failed to switch role:', error)
+	}
+}
+
+const logout = async () => {
+	await authStore.logout()
+	router.push('/login')
 }
 </script>

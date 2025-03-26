@@ -6,5 +6,36 @@ To setup the repository locally follow the steps mentioned below:
 1. Fork the LMS app
 1. Run bench get-app <url-of-your-form>.
 1. Run bench --site lms.test install-app lms.
-1. Map your site to localhost with the command ```bench --site lms.test add-to-hosts```
+1. Map your site to localhost with the command `bench --site lms.test add-to-hosts`
 1. Now open the URL http://lms.test:8000/ in your browser, you should see the app running.
+1. Set developer mode for the site
+
+# Stop the containers
+
+docker-compose down
+
+# Create or modify the site config file
+
+mkdir -p frappe-bench/sites/lms.localhost
+
+# Modify the configuration files
+
+# Then restart
+
+docker-compose up -d
+
+# Switch to the bench directory
+
+cd frappe-bench
+
+# Modify site config
+
+bench --site lms.localhost set-config <key> <value>
+
+# Clear cache
+
+bench --site lms.localhost clear-cache
+
+# Restart bench
+
+bench restart

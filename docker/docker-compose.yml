@@ -21,6 +21,10 @@ services:
     command: bash /workspace/init.sh
     environment:
       - SHELL=/bin/bash
+      # Add Google OAuth2 environment variables
+      - GOOGLE_OAUTH2_CLIENT_ID=${GOOGLE_OAUTH2_CLIENT_ID}
+      - GOOGLE_OAUTH2_CLIENT_SECRET=${GOOGLE_OAUTH2_CLIENT_SECRET}
+      - GOOGLE_OAUTH2_REDIRECT_URI=${GOOGLE_OAUTH2_REDIRECT_URI:-http://localhost:8000/api/method/lms.lms.user.google_callback}
     working_dir: /home/frappe
     volumes:
       - .:/workspace

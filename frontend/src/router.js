@@ -2,14 +2,28 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { usersStore } from './stores/user'
 import { sessionStore } from './stores/session'
 import { useSettings } from './stores/settings'
+import { useAuthStore } from './stores/auth'
 
 let defaultRoute = '/courses'
 const routes = [
+	{
+		path: '/login',
+		name: 'Login',
+		component: () => import('@/pages/Login.vue'),
+		meta: { requiresAuth: false }
+	},
+	{
+		path: '/signup',
+		name: 'Signup',
+		component: () => import('@/pages/Signup.vue'),
+		meta: { requiresAuth: false }
+	},
 	{
 		path: '/',
 		redirect: {
 			name: 'Courses',
 		},
+		meta: { requiresAuth: true }
 	},
 	{
 		path: '/courses',
@@ -218,32 +232,23 @@ const routes = [
 	},
 ]
 
-let router = createRouter({
-	history: createWebHistory('/lms'),
+const router = createRouter({
+	history: createWebHistory(),
 	routes,
 })
 
+// Navigation guard
 router.beforeEach(async (to, from, next) => {
-	const { userResource } = usersStore()
-	let { isLoggedIn } = sessionStore()
-	const { allowGuestAccess } = useSettings()
+	const authStore = useAuthStore()
+	const requiresAuth = to.matched.some(record => record.meta.requiresAuth !== false)
 
-	try {
-		if (isLoggedIn) {
-			await userResource.promise
-		}
-	} catch (error) {
-		isLoggedIn = false
+	if (requiresAuth && !authStore.isAuthenticated) {
+		next({ name: 'Login', query: { redirect: to.fullPath } })
+	} else if (to.name === 'Login' && authStore.isAuthenticated) {
+		next({ name: 'Courses' })
+	} else {
+		next()
 	}
-
-	if (!isLoggedIn) {
-		await allowGuestAccess.promise
-		if (!allowGuestAccess.data) {
-			window.location.href = '/login'
-			return
-		}
-	}
-	return next()
 })
 
 export default router
